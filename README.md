@@ -14,13 +14,11 @@ Es una **app web instalable**: se abre desde Safari, se agrega a la pantalla de 
 | 🎯 **Retos** | 63 retos para elegir (de 7 días y caminos de 14 a 30 días), metas semanales, hábitos, reflexión semanal, jardín que florece y juegos (Palabra del día y Sopa de letras) |
 | 🌸 **Yo** | Nivel del jardín interior, estadísticas, calendario de práctica, gráfico de ánimo, 21 logros, tu nota, ajustes, recordatorio diario y respaldo |
 
-## 1. Publicarla (una sola vez, ~2 minutos)
+## 1. Dónde está publicada
 
-1. En GitHub, abre el repositorio → **Settings** → **Pages** (menú de la izquierda).
-2. En **Build and deployment → Source** elige **Deploy from a branch**.
-3. En **Branch** elige la rama donde está la app (`main` si ya la uniste, o la rama `claude/...`) y la carpeta **`/ (root)`** → **Save**.
-4. Espera 1–2 minutos y recarga la página: arriba aparecerá el link, algo como
-   `https://cacodf.github.io/la-meditacion-de-la-mona/`
+👉 **https://cacodf.github.io/la-meditacion-de-la-mona/**
+
+Se publica sola con GitHub Pages desde la rama **`gh-pages`**: cada cambio que se sube a esa rama llega a la app en 1–2 minutos.
 
 ## 2. Instalarla en su iPhone
 
@@ -32,7 +30,7 @@ Es una **app web instalable**: se abre desde Safari, se agrega a la pantalla de 
 
 ## 3. Personalizar
 
-Todo lo personal está en [`js/config.js`](js/config.js). Puedes editarlo directo en GitHub (lápiz ✏️ → cambias el texto → **Commit changes**):
+Todo lo personal está en [`js/config.js`](js/config.js). Puedes editarlo directo en GitHub: cambia a la rama **`gh-pages`**, abre el archivo, toca el lápiz ✏️, cambia el texto y guarda con **Commit changes**.
 
 - `loveNote`: el mensaje sorpresa.
 - `defaultName`: cómo la saluda (ella también lo puede cambiar en Yo → Ajustes).
