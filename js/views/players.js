@@ -9,7 +9,7 @@ import { afterSession, refresh } from '../ui.js';
 import { createTrackedPlayer, videoUrl } from '../youtube.js';
 import { getAudio, updateAudio } from '../audiolib.js';
 import {
-  unlockAudio, bell, bells, breathTone, startSound, stopSound, stopAllSounds, isPlaying,
+  unlockAudio, holdAudio, bell, bells, breathTone, startSound, stopSound, stopAllSounds, isPlaying,
   activeSounds, setSoundVolume,
 } from '../audio.js';
 
@@ -135,7 +135,12 @@ export async function openAudio(id, { onChange } = {}) {
       audio.pause();
       URL.revokeObjectURL(url);
       keepAwake(false);
-      if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
+      audio.removeAttribute('src');
+      audio.load();
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
+      }
       const minutes = listened / 60;
       if (minutes >= 1) {
         await updateAudio(id, { plays: (rec.plays || 0) + 1, lastPlayed: new Date().toISOString() });
@@ -265,6 +270,7 @@ function runTimer({ minutes, interval, prep, sound }) {
     onClose: () => {
       cancelAnimationFrame(raf);
       keepAwake(false);
+      holdAudio(false);
       if (sound) stopSound(sound);
       if (!finished && elapsed >= 60) afterSession(logSession({ type: 'timer', title: 'Meditación en silencio', minutes: elapsed / 60 }));
     },
@@ -278,6 +284,7 @@ function runTimer({ minutes, interval, prep, sound }) {
   ring.style.strokeDashoffset = C;
 
   keepAwake(true);
+  holdAudio(true);
   if (sound) startSound(sound);
   if (phase === 'run') bell({ volume: vol });
 
@@ -397,6 +404,7 @@ export function openBreath({ minutes, pattern } = {}) {
       stopped = true;
       clearTimeout(timer);
       keepAwake(false);
+      holdAudio(false);
       const secs = (performance.now() - started) / 1000;
       if (!completed && secs >= 30) afterSession(logSession({ type: 'breath', title: `Respiración: ${p.name}`, minutes: secs / 60 }));
     },
@@ -407,6 +415,7 @@ export function openBreath({ minutes, pattern } = {}) {
   const count = b.querySelector('[data-count]');
   const left = b.querySelector('[data-left]');
   keepAwake(true);
+  holdAudio(true);
 
   const SCALE = { in: 1, in2: 1.1, out: 0.42 };
 

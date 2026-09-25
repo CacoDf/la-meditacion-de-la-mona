@@ -4,7 +4,6 @@ import { state, subscribe } from './store.js';
 import { $, closeAllSheets, toast } from './util.js';
 import { ICONS } from './icons.js';
 import { announceBadges, applyTheme } from './ui.js';
-import { unlockAudio } from './audio.js';
 import hoy from './views/hoy.js';
 import meditar from './views/meditar.js';
 import diario from './views/diario.js';
@@ -75,9 +74,6 @@ window.addEventListener('calma:refresh', () => render({ keepScroll: true }));
 subscribe(() => { render({ keepScroll: true }); announceBadges(); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
 
-// iOS exige un toque antes de poder reproducir sonido.
-document.addEventListener('touchend', unlockAudio, { once: true, passive: true });
-document.addEventListener('click', unlockAudio, { once: true });
 
 // Si pasa la medianoche con la app abierta, refresca "Hoy".
 let lastDay = new Date().toDateString();

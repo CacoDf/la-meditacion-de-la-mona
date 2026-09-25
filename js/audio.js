@@ -4,6 +4,20 @@
 let ctx = null;
 let master = null;
 
+/* ---------- Sesión de audio: encendida solo mientras se usa ----------
+   iOS muestra la app como "reproduciendo" mientras el contexto de audio está activo.
+   Por eso se enciende al necesitar sonido y se suspende apenas termina el último sonido. */
+
+let holds = 0; // pantallas de práctica abiertas (temporizador, respiración)
+let busyUntil = 0; // hasta cuándo sigue sonando la última campana o tono
+let idleTimer = null;
+
+function setSessionType(type) {
+  try {
+    if (navigator.audioSession && navigator.audioSession.type !== type) navigator.audioSession.type = type;
+  } catch { /* opcional */ }
+}
+
 function getCtx() {
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -12,21 +26,61 @@ function getCtx() {
     master.gain.value = 1;
     master.connect(ctx.destination);
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  // 'playback' permite sonar aunque el switch de silencio esté activado (iOS 17+).
+  setSessionType('playback');
+  if (ctx.state !== 'running') ctx.resume();
+  scheduleRelease();
   return ctx;
 }
 
+function markBusy(seconds) {
+  busyUntil = Math.max(busyUntil, performance.now() + seconds * 1000);
+  scheduleRelease();
+}
+
+function scheduleRelease() {
+  clearTimeout(idleTimer);
+  const wait = Math.max(0, busyUntil - performance.now()) + 1500;
+  idleTimer = setTimeout(releaseIfIdle, wait);
+}
+
+function releaseIfIdle(force = false) {
+  if (holds > 0 || active.size > 0) return;
+  if (!force && performance.now() < busyUntil) { scheduleRelease(); return; }
+  clearTimeout(idleTimer);
+  busyUntil = 0;
+  if (ctx && ctx.state === 'running') ctx.suspend().catch(() => {});
+  setSessionType('auto');
+}
+
+// Mientras una pantalla de práctica esté abierta el audio se mantiene listo (las campanas
+// intermedias necesitan sonar sin un toque); al cerrarla se libera.
+export function holdAudio(on) {
+  holds = Math.max(0, holds + (on ? 1 : -1));
+  if (on) getCtx(); else scheduleRelease();
+}
+
+// Al salir de la app, si no hay sonidos ambientales activos, se apaga todo de inmediato.
+// Si vuelve con un temporizador o respiración abiertos, el audio se reactiva.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && active.size === 0) {
+    clearTimeout(idleTimer);
+    busyUntil = 0;
+    if (ctx && ctx.state === 'running') ctx.suspend().catch(() => {});
+    setSessionType('auto');
+  } else if (document.visibilityState === 'visible' && holds > 0) {
+    getCtx();
+  }
+});
+
 // Debe llamarse dentro de un toque del usuario (requisito de iOS).
 export function unlockAudio() {
-  try {
-    // En iOS 17+ permite sonar aunque el switch de silencio esté activado.
-    if (navigator.audioSession) navigator.audioSession.type = 'playback';
-  } catch { /* opcional */ }
   const c = getCtx();
   const src = c.createBufferSource();
   src.buffer = c.createBuffer(1, 1, 22050);
   src.connect(c.destination);
   src.start(0);
+  markBusy(0.2);
 }
 
 /* ============ Campana tipo cuenco tibetano ============ */
@@ -38,6 +92,7 @@ export function bell({ volume = 0.8, pitch = 1, when = 0, length = 1 } = {}) {
   out.gain.value = volume * 0.32;
   out.connect(master);
 
+  markBusy(when + 7 * length + 0.2);
   const base = 174 * pitch;
   // Parciales inarmónicos de un cuenco: [razón, amplitud, decaimiento en segundos]
   const partials = [[1, 1, 7], [2.02, 0.55, 5], [2.98, 0.35, 4], [4.16, 0.22, 3], [5.43, 0.14, 2.4], [6.79, 0.08, 1.8]];
@@ -66,6 +121,7 @@ export function bells(count = 3, opts = {}) {
 
 export function breathTone(kind, seconds) {
   const c = getCtx();
+  markBusy(seconds + 0.2);
   const t = c.currentTime;
   const o = c.createOscillator();
   const g = c.createGain();
@@ -320,6 +376,7 @@ export function stopSound(id, fade = 1.2) {
   entry.gain.gain.cancelScheduledValues(c.currentTime);
   entry.gain.gain.setValueAtTime(Math.max(0.0001, entry.gain.gain.value), c.currentTime);
   entry.gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + fade);
+  markBusy(fade + 0.2);
   setTimeout(() => { entry.node.stop(); entry.gain.disconnect(); }, fade * 1000 + 100);
 }
 
